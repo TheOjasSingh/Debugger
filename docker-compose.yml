@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  debugr-go:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-core
+    ports:
+      - "8080:8080"
+    networks:
+      - debugr-net
+
+  debugr-python:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-python
+    networks:
+      - debugr-net
+    depends_on:
+      - debugr-go
+
+networks:
+  debugr-net:
+    driver: bridge

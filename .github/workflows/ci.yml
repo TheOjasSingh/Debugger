@@ -1,0 +1,86 @@
+name: CI Workflow
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-go:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.22'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build Go application
+        run: |
+          cd core
+          go mod tidy
+          go build -o debugr main.go
+
+      - name: Run Go tests
+        run: |
+          cd core
+          go test ./...
+
+  build-python:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r python-sdk/requirements.txt
+
+      - name: Run Python tests (if any)
+        run: |
+          # Add any Python testing commands here
+          echo "Python tests not implemented"
+        
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [build-go, build-python]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker images
+        run: |
+          docker-compose -f docker-compose.yml build
+
+      - name: Test Docker containers
+        run: |
+          docker-compose -f docker-compose.yml up -d
+          sleep 10  # Wait for containers to start
+          # Test if Go server is running
+          curl -f http://localhost:8080/trace?pid=1234 || exit 1
+          # Test if Python CLI works
+          docker-compose exec debugr-python trace 1234 || exit 1
+
+      - name: Stop Docker containers
+        run: docker-compose -f docker-compose.yml down
