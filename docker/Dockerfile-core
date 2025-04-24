@@ -1,0 +1,18 @@
+# Build stage
+FROM golang:1.22-alpine as build
+
+WORKDIR /app
+COPY core/ .
+
+RUN go mod tidy
+RUN go build -o debugr main.go
+
+# Final stage
+FROM alpine:latest
+
+WORKDIR /root/
+COPY --from=build /app/debugr .
+
+EXPOSE 8080
+
+CMD ["./debugr"]

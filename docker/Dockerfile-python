@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY python-sdk/ /app/
+RUN pip install -r requirements.txt
+
+ENV PYTHONPATH=/app
+
+ENTRYPOINT ["python", "debugr/cli.py"]
